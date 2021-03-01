@@ -1,0 +1,111 @@
+---
+title: "The_three_plots"
+output: html_document
+---
+
+
+Data Preparation
+```{r}
+library(ggplot2)
+library(GGally)
+library(gridExtra)
+library(ggrepel)
+library(here)
+
+#Import data
+total <- read.csv(here("Data","Ecological_footprint.csv"), header = T) 
+
+#Rule out Oceania since there are only 2 countries
+total <- subset(total,Continent!="Oceania")
+
+#Ensure they are in factor type and rename them
+total$Continent <-factor(total$Continent)
+total$Continent <- factor(total$Continent, levels = c("Africa","Latin America","North America","Asia", "Europe"))
+
+total$EF_Rank <- factor(total$EF_Rank, levels = c("Very High", "High", "Medium", "Low"))
+total$EF_rank <- factor(total$EF_rank, levels = c("Very High", "High", "Medium & Low"))
+
+#Create a difference
+total$Diff2015 <- total$Total_EF - total$BC2015
+```
+
+
+#Final version of the first plot
+```{r}
+
+p3<-ggparcoord(total[order(total$EF_rank),], columns = c(21,14,17,15,16,13,18), groupColumn = "EF_Rank",scale = "globalminmax") + 
+  theme_minimal()  +  
+  labs(x = "Six Major Ecological Footprint and Its Total EF", y = "Ecological Footprint (Hectare unit)")+
+  scale_color_manual(values=c("red", "blue", "#00BA38","#C77CFF")) +
+  theme(legend.position="none")+
+  theme(axis.title.x = element_text(size=16,color="black",face="bold"),
+        legend.text=element_text(size=14),
+        axis.title.y = element_text(size=15),
+        axis.text.y = element_text(size=12),
+        plot.caption =element_text(size=14,colour = "black", hjust = 0),
+        axis.text.x = element_text(size= 14,face="bold",colour = c("#FF6600","orange","orange","orange","orange","orange","orange"),margin = margin(t = 0, r = 5, b = 12, l = 0)))+
+  scale_x_discrete(labels=c("Total_EF" = "Total EF", "Carbon" = "Carbon",
+                            "Forest_Products" = "Forest Products", "Cropland"="Cropland","Fishing"="Fishing","Built_up_Land"="Build-up Land","Grazing_Land"="Grazing Land"))
+
+p3
+
+```
+#Final version of the second plot
+```{r}
+p2 <- ggplot(total,aes(y=Total_EF,x=Continent))  + 
+  geom_boxplot(outlier.shape = NA) + 
+  geom_jitter(aes(col=EF_Rank),width=0.13,size=1.5)  + 
+  labs(col="EF Rank",subtitle = "Average Ecological Footprint from 2006 to 2015 by Continents", y="Total EF (Hectare unit)") + 
+  scale_y_continuous(breaks = c(0,2,4,6,8,10,12,14,16)) +  scale_color_brewer(palette="Set1") + theme_minimal() +
+  scale_color_manual(values=c("red", "blue", "#00BA38","#C77CFF")) +
+  theme(axis.title.x= element_blank(),
+        axis.text.x = element_text(size= 14,face="bold",color="black",margin = unit(c(0,0, 0.8, 0), "cm")),
+        axis.text.y = element_text(size=13,margin = unit(c(0,0, 0, 2), "mm")),
+        axis.title.y= element_text(size= 15,margin = unit(c(0,0, 0, 1.5), "cm")),
+        plot.subtitle =element_text(size=15, face="bold",colour = "black", hjust = 0),
+        legend.text=element_text(size=15),
+        legend.title = element_text(size=14,face="bold")) +
+  geom_label_repel( data = subset(total, EF_Rank=="Very High"),aes(label = Country.Name,
+                                                                   fill = "purple"), color = 'white',
+                    size = 3.5, show.legend = F)+
+  scale_x_discrete(labels=c("Latin America" = "Latin"))
+
+p2
+
+```
+
+
+#Final version of third plot:
+
+```{r}
+p1<-ggplot(subset(total,abs(Diff2015)<20), aes(y=Diff2015,x=reorder(Country.Name,Diff2015),fill=EF_Rank)) + 
+  labs(x="All 123 Countries",subtitle="Ecological Footprint (Expenditure) - Biocapacity (Resource)")+ 
+  geom_bar(stat="identity",show.legend = FALSE) + theme_minimal() + coord_flip() +
+  scale_fill_manual(values=c("red", "blue", "#00BA38","#C77CFF")) +
+  theme(axis.text.y= element_blank(),
+        axis.text.x = element_text(size= 14,face="bold",margin = unit(c(0,0, 0.8, 0), "cm")),
+        axis.title.y= element_text(size= 15),
+        axis.ticks.y= element_blank(),
+        axis.line.y = element_blank(),
+        axis.title.x= element_blank(),
+        plot.subtitle = element_text(size=15, face="bold",hjust=0.3),
+        panel.border = element_blank(), panel.grid.major = element_blank(), axis.line = element_line(colour = "black"))+
+  annotate("text",x="Bhutan",y=-9,label="Expenditure < Resources",size=5) +
+  annotate("text",x="India",y=9,label="Expenditure > Resources",size=5) +
+  geom_segment(aes(x = "Mali", y = -15, xend = "Mali", yend = 15),linetype=4)
+
+
+p1
+
+```
+
+
+
+Put them all together
+```{r}
+grid.arrange(arrangeGrob(p1,p2,ncol=2,widths=c(1,1.5)),
+             p3,nrow=2)
+```
+
+
+
